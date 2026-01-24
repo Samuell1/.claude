@@ -1,0 +1,55 @@
+{
+  "env": {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "DISABLE_BUG_COMMAND": "1",
+    "DISABLE_TELEMETRY": "1",
+    "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1"
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git branch:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)"
+    ],
+    "deny": [
+      "Bash(git -C:*)",
+      "Bash(git --no-pager:*)"
+    ],
+    "ask": [
+      "Bash(python:*)",
+      "Bash(py:*)",
+      "Bash(py --version)",
+      "Bash(where python)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(sudo:*)",
+      "Bash(docker:*)",
+      "Bash(kubectl:*)",
+      "Bash(aws:*)",
+      "Bash(gcloud:*)",
+      "Bash(az:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)"
+    ]
+  },
+  "alwaysThinkingEnabled": true,
+  "autoUpdatesChannel": "latest",
+  "spinnerTipsEnabled": false,
+  "statusLine": {
+    "type": "command",
+    "command": "node C:/Users/Samuel/.claude/statusline.js"
+  }
+}

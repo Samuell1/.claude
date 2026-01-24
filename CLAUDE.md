@@ -1,0 +1,5 @@
+- When you are not sure or your confidence is below 80%, ask the user for clarification, guidance or more context
+- Use AskUserQuestionTool whenever user needs to make a choice - clarifications, variants, versions, approaches, or any decision between multiple options.
+- Always use bun instead of npm for all package management tasks - use 'bun install', 'bun add', 'bun remove', 'bun run', 'bunx', etc.
+- Skip frontend build commands during development - hot reload handles it. Only run build when explicitly asked or for production.
+- Use subagents to parallelize work when handling multiple files or independent tasks.
