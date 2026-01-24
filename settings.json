@@ -46,5 +46,10 @@
     ]
   },
   "alwaysThinkingEnabled": true,
-  "autoUpdatesChannel": "latest"
+  "autoUpdatesChannel": "latest",
+  "spinnerTipsEnabled": false,
+  "statusLine": {
+    "type": "command",
+    "command": "node C:/Users/Samuel/.claude/statusline.js"
+  }
 }
