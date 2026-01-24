@@ -14,6 +14,10 @@
       "Bash(claude --version)",
       "Bash(claude config show)",
       "Bash(claude config:*)",
+      "Bash(git status)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git branch:*)",
       "mcp__Ref__ref_read_url",
       "WebSearch"
     ],
