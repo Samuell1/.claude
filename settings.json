@@ -18,6 +18,11 @@
       "Bash(git log:*)",
       "Bash(git diff:*)",
       "Bash(git branch:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
       "mcp__Ref__ref_read_url",
       "WebSearch"
     ],
