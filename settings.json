@@ -19,9 +19,7 @@
       "Bash(head:*)",
       "Bash(tail:*)",
       "Bash(grep:*)",
-      "Bash(find:*)",
-      "mcp__Ref__ref_read_url",
-      "WebSearch"
+      "Bash(find:*)"
     ],
     "deny": [
       "Bash(git -C:*)",
