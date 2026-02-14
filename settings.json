@@ -1,8 +1,6 @@
 {
   "env": {
-    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
-    "DISABLE_BUG_COMMAND": "1",
-    "DISABLE_TELEMETRY": "1",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1"
   },
   "attribution": {
@@ -11,17 +9,35 @@
   },
   "permissions": {
     "allow": [
-      "Bash(git status)",
-      "Bash(git log:*)",
-      "Bash(git diff:*)",
-      "Bash(git branch:*)",
-      "Bash(cat:*)",
-      "Bash(head:*)",
-      "Bash(tail:*)",
-      "Bash(grep:*)",
-      "Bash(find:*)"
+      "Read",
+      "Edit",
+      "Write",
+      "Grep",
+      "Glob",
+      "TaskCreate",
+      "TaskList",
+      "TaskGet",
+      "TaskUpdate",
+      "WebFetch",
+      "Task",
+      "Bash(git *)",
+      "Bash(bun *)",
+      "Bash(bunx *)",
+      "Bash(ls *)",
+      "Bash(wc *)",
+      "Bash(sort *)",
+      "Bash(curl *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)"
     ],
     "deny": [
+      "Bash(rm -rf *)",
+      "Bash(rm -r *)",
+      "Bash(sudo *)",
+      "Read(.env*)",
+      "Write(.env*)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)",
       "Bash(git -C:*)",
       "Bash(git --no-pager:*)"
     ],
@@ -30,26 +46,23 @@
       "Bash(py:*)",
       "Bash(py --version)",
       "Bash(where python)",
-      "Bash(rm:*)",
-      "Bash(mv:*)",
-      "Bash(cp:*)",
-      "Bash(curl:*)",
       "Bash(wget:*)",
-      "Bash(sudo:*)",
       "Bash(docker:*)",
       "Bash(kubectl:*)",
       "Bash(aws:*)",
       "Bash(gcloud:*)",
       "Bash(az:*)",
       "Bash(git push:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(mv *)",
+      "Bash(rm *)"
     ]
   },
-  "alwaysThinkingEnabled": true,
-  "autoUpdatesChannel": "latest",
-  "spinnerTipsEnabled": false,
   "statusLine": {
     "type": "command",
     "command": "node C:/Users/Samuel/.claude/statusline.js"
-  }
+  },
+  "spinnerTipsEnabled": false,
+  "alwaysThinkingEnabled": true,
+  "autoUpdatesChannel": "latest"
 }
