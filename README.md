@@ -63,4 +63,6 @@ claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 - `code-review@power-plugins` — Code review for PRs
 - `git-workflow@power-plugins` — Git commit/PR workflows
 
-Marketplace: [dajanarodriguez/claude-plugins](https://github.com/dajanarodriguez/claude-plugins)
+Marketplaces:
+- [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) — Default marketplace (built-in, available via `/plugin`)
+- [dajanarodriguez/claude-plugins](https://github.com/dajanarodriguez/claude-plugins) — Extra plugins
