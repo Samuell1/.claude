@@ -35,7 +35,7 @@ The `PreToolUse.ts` hook runs before every Bash command and:
 The custom statusline shows at a glance:
 
 ```
-Claude Opus 4.6 │ 125k/1M 12% │ my-project (main*) │ ⏱ 23m │ ● high
+Claude Opus 4.6 │ 125k/1M 12% │ my-project (main*) │ ● high
 
 current ●●●●●○○○○○  50% ⟳ 3:45pm
 weekly  ●●○○○○○○○○  20% ⟳ mar 22
@@ -44,7 +44,6 @@ weekly  ●●○○○○○○○○  20% ⟳ mar 22
 - **Model name** — which Claude model is active
 - **Context usage** — tokens used / max with color-coded percentage
 - **Project & branch** — directory name, git branch, dirty indicator
-- **Session timer** — how long the session has been running
 - **Effort level** — current thinking effort setting
 - **Rate limits** — 5-hour and weekly usage bars with reset times
 
