@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
 import { basename, join } from "path";
-import { readFileSync, writeFileSync, mkdirSync, statSync } from "fs";
+import { readFileSync, mkdirSync, statSync, writeFileSync } from "fs";
 
 // ── Colors ──────────────────────────────────────────────
 const blue = "\x1b[38;2;0;153;255m";
@@ -121,24 +121,7 @@ try {
   if (porcelain) gitDirty = "*";
 } catch {}
 
-// ── Session duration ────────────────────────────────────
-let sessionDuration = "";
-const sessionStart: string | undefined = input.session?.start_time;
-if (sessionStart) {
-  const startMs = new Date(sessionStart).getTime();
-  if (!isNaN(startMs)) {
-    const elapsed = Math.floor((Date.now() - startMs) / 1000);
-    if (elapsed >= 3600) {
-      sessionDuration = `${Math.floor(elapsed / 3600)}h${Math.floor((elapsed % 3600) / 60)}m`;
-    } else if (elapsed >= 60) {
-      sessionDuration = `${Math.floor(elapsed / 60)}m`;
-    } else {
-      sessionDuration = `${elapsed}s`;
-    }
-  }
-}
-
-// ── LINE 1: Model │ Context % │ Dir (branch) │ Session │ Effort ──
+// ── LINE 1: Model │ Context % │ Dir (branch) │ Effort ──
 let line1 = `${orange}${modelName}${rst}`;
 line1 += sep;
 line1 += `${colorForPct(pctUsed)}${formatTokens(current)}/${formatTokens(size)} ${pctUsed}%${rst}`;
@@ -146,10 +129,6 @@ line1 += sep;
 line1 += `${cyan}${dirName}${rst}`;
 if (gitBranch) {
   line1 += ` ${green}(${gitBranch}${gitDirty ? `${red}${gitDirty}` : ""}${green})${rst}`;
-}
-if (sessionDuration) {
-  line1 += sep;
-  line1 += `${dim}⏱ ${rst}${white}${sessionDuration}${rst}`;
 }
 line1 += sep;
 switch (effort) {

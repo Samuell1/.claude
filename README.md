@@ -12,7 +12,7 @@ Personal Claude Code configuration — settings, hooks, statusline, and plugins.
 Copy and paste this prompt into Claude Code from your project directory:
 
 ```
-Clone the .claude folder from https://github.com/Samuell1/claude-setup to my current project directory. Copy settings, hooks, and statusline, preserving the folder structure.
+Clone the .claude folder from https://github.com/Samuell1/.claude to my current project directory. Copy settings, hooks, and statusline, preserving the folder structure.
 ```
 
 ## What's Inside
