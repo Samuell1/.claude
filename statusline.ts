@@ -9,6 +9,7 @@ const cyan = "\x1b[38;2;86;182;194m";
 const red = "\x1b[38;2;255;85;85m";
 const yellow = "\x1b[38;2;230;200;0m";
 const white = "\x1b[38;2;220;220;220m";
+const magenta = "\x1b[38;2;180;140;255m";
 const dim = "\x1b[2m";
 const rst = "\x1b[0m";
 
@@ -87,6 +88,17 @@ const cacheRead: number = input.context_window?.current_usage?.cache_read_input_
 const current = inputTokens + cacheCreate + cacheRead;
 const pctUsed = size > 0 ? Math.floor((current * 100) / size) : 0;
 
+// Read effort from settings
+let effort: string = input.effort_level ?? "default";
+if (effort === "default") {
+  try {
+    const settings = JSON.parse(
+      readFileSync(join(process.env.HOME!, ".claude", "settings.json"), "utf8"),
+    );
+    effort = settings.effortLevel ?? "default";
+  } catch {}
+}
+
 // ── Git info ────────────────────────────────────────────
 const cwd: string = input.cwd ?? input.workspace?.current_dir ?? process.cwd();
 const dirName = basename(cwd);
@@ -116,6 +128,27 @@ line1 += sep;
 line1 += `${cyan}${dirName}${rst}`;
 if (gitBranch) {
   line1 += ` ${green}(${gitBranch}${gitDirty ? `${red}${gitDirty}` : ""}${green})${rst}`;
+}
+line1 += sep;
+switch (effort) {
+  case "max":
+    line1 += `${red}⬤ ${effort}${rst}`;
+    break;
+  case "high":
+    line1 += `${magenta}● ${effort}${rst}`;
+    break;
+  case "medium":
+    line1 += `${dim}◑ ${effort}${rst}`;
+    break;
+  case "low":
+    line1 += `${dim}◔ ${effort}${rst}`;
+    break;
+  case "auto":
+    line1 += `${cyan}◉ ${effort}${rst}`;
+    break;
+  default:
+    line1 += `${dim}◑ ${effort}${rst}`;
+    break;
 }
 
 // ── OAuth token resolution ──────────────────────────────
