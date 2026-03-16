@@ -30,12 +30,33 @@ The `PreToolUse.ts` hook runs before every Bash command and:
 3. Checks each sub-command against your allow/deny/ask patterns from settings.json
 4. Deny → block, Allow → auto-approve, Ask → prompt for confirmation
 
+## Status Line
+
+The custom statusline shows at a glance:
+
+```
+Claude Opus 4.6 │ 125k/1M 12% │ my-project (main*) │ ⏱ 23m │ ● high
+
+current ●●●●●○○○○○  50% ⟳ 3:45pm
+weekly  ●●○○○○○○○○  20% ⟳ mar 22
+```
+
+- **Model name** — which Claude model is active
+- **Context usage** — tokens used / max with color-coded percentage
+- **Project & branch** — directory name, git branch, dirty indicator
+- **Session timer** — how long the session has been running
+- **Effort level** — current thinking effort setting
+- **Rate limits** — 5-hour and weekly usage bars with reset times
+
 ## MCP Servers
 
-Built-in claude.ai integrations:
-- **Figma** — `https://mcp.figma.com/mcp`
-- **Sentry** — `https://mcp.sentry.dev/mcp`
-- **Chrome** — Claude-in-Chrome browser automation
+```bash
+# Figma integration
+claude mcp add --transport http figma https://mcp.figma.com/mcp
+
+# Sentry error tracking
+claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
+```
 
 ## Plugins
 
