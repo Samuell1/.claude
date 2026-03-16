@@ -1,4 +1,5 @@
 {
+  "cleanupPeriodDays": 999999,
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1"
@@ -14,21 +15,83 @@
       "Write",
       "Grep",
       "Glob",
+      "WebFetch",
+      "WebSearch",
       "TaskCreate",
       "TaskList",
       "TaskGet",
       "TaskUpdate",
-      "WebFetch",
       "Task",
       "Bash(git *)",
-      "Bash(bun *)",
+      "Bash(bun install)",
+      "Bash(bun install *)",
+      "Bash(bun i)",
+      "Bash(bun add *)",
+      "Bash(bun remove *)",
+      "Bash(bun run dev *)",
+      "Bash(bun run dev)",
+      "Bash(bun run build *)",
+      "Bash(bun run build)",
+      "Bash(bun run start *)",
+      "Bash(bun run start)",
+      "Bash(bun run test *)",
+      "Bash(bun run test)",
+      "Bash(bun test *)",
+      "Bash(bun test)",
+      "Bash(bun run lint *)",
+      "Bash(bun run lint)",
+      "Bash(bun run format *)",
+      "Bash(bun run format)",
+      "Bash(bun run typecheck *)",
+      "Bash(bun run typecheck)",
+      "Bash(bun run check *)",
+      "Bash(bun run check)",
+      "Bash(bun run type-check *)",
+      "Bash(bun run type-check)",
+      "Bash(bun --version)",
       "Bash(bunx *)",
       "Bash(ls *)",
       "Bash(wc *)",
       "Bash(sort *)",
       "Bash(curl *)",
       "Bash(mkdir *)",
-      "Bash(cp *)"
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(which *)",
+      "Bash(where *)",
+      "Bash(echo *)",
+      "Bash(pwd)",
+      "Bash(node *)",
+      "Bash(py --version)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh pr diff *)",
+      "Bash(gh pr status *)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue list *)",
+      "Bash(gh api *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(xargs *)",
+      "Bash(awk *)",
+      "Bash(sed *)",
+      "Bash(cut *)",
+      "Bash(tr *)",
+      "Bash(tee *)",
+      "Bash(uniq *)",
+      "Bash(diff *)",
+      "Bash(tree *)",
+      "Bash(du *)",
+      "Bash(df *)",
+      "Bash(touch *)",
+      "Bash(stat *)",
+      "Bash(file *)",
+      "Bash(cd *)"
     ],
     "deny": [
       "Bash(rm -rf *)",
@@ -44,25 +107,57 @@
     "ask": [
       "Bash(python:*)",
       "Bash(py:*)",
-      "Bash(py --version)",
-      "Bash(where python)",
       "Bash(wget:*)",
       "Bash(docker:*)",
       "Bash(kubectl:*)",
       "Bash(aws:*)",
       "Bash(gcloud:*)",
       "Bash(az:*)",
+      "Bash(bun run deploy*)",
+      "Bash(bun run prod*)",
+      "Bash(bun run publish*)",
+      "Bash(bun run release*)",
+      "Bash(bun run migrate*)",
+      "Bash(bun *)",
       "Bash(git push:*)",
-      "Bash(git pull:*)",
-      "Bash(mv *)",
-      "Bash(rm *)"
+      "Bash(rm *)",
+      "Bash(*--remote*)"
+    ],
+    "defaultMode": "default"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run ~/.claude/hooks/PreToolUse.ts",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
     "type": "command",
-    "command": "node C:/Users/Samuel/.claude/statusline.js"
+    "command": "bun run ~/.claude/statusline.ts"
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "code-review@power-plugins": true,
+    "git-workflow@power-plugins": true
+  },
+  "extraKnownMarketplaces": {
+    "power-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "dajanarodriguez/claude-plugins"
+      }
+    }
   },
   "spinnerTipsEnabled": false,
   "alwaysThinkingEnabled": true,
-  "autoUpdatesChannel": "latest"
+  "autoUpdatesChannel": "latest",
+  "voiceEnabled": true
 }

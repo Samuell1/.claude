@@ -1,3 +1,27 @@
+# Sensitive / local-only
+.credentials.json
+history.jsonl
+stats-cache.json
+sessions/
+projects/
+file-history/
+shell-snapshots/
+paste-cache/
+session-env/
+telemetry/
+usage-data/
+statsig/
+todos/
+tasks/
+teams/
+plans/
+debug/
+downloads/
+backups/
+cache/
+chrome/
+ide/
+
 # IntelliJ project files
 .idea
 *.iml
