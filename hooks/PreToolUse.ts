@@ -78,6 +78,8 @@ function commandMatchesPattern(cmd: string, patterns: ParsedPattern[]): boolean 
   for (const { prefix, glob } of patterns) {
     if (cmd === prefix) return true;
     if (fnmatch(cmd, glob)) return true;
+    // "sort *" should also match bare "sort" (no args)
+    if (glob.endsWith(" *") && cmd === glob.slice(0, -2)) return true;
   }
   return false;
 }
