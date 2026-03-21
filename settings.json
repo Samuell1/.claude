@@ -48,7 +48,6 @@
       "Bash(bun run type-check *)",
       "Bash(bun run type-check)",
       "Bash(bun --version)",
-      "Bash(bunx *)",
       "Bash(ls *)",
       "Bash(wc *)",
       "Bash(sort *)",
@@ -119,7 +118,8 @@
       "Bash(bun run migrate*)",
       "Bash(git push:*)",
       "Bash(rm *)",
-      "Bash(*--remote*)"
+      "Bash(*--remote*)",
+      "Bash(*wrangler*delete*)"
     ],
     "defaultMode": "default"
   },
@@ -132,6 +132,18 @@
             "type": "command",
             "command": "bun run ~/.claude/hooks/PreToolUse.ts",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -ExecutionPolicy Bypass -File C:\\Users\\Samuel\\.claude\\hooks\\stop-notify.ps1",
+            "timeout": 10,
+            "async": true
           }
         ]
       }
@@ -156,6 +168,7 @@
   },
   "spinnerTipsEnabled": false,
   "alwaysThinkingEnabled": true,
+  "effortLevel": "high",
   "autoUpdatesChannel": "latest",
   "voiceEnabled": true
 }
