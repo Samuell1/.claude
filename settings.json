@@ -135,18 +135,6 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -ExecutionPolicy Bypass -File C:\\Users\\Samuel\\.claude\\hooks\\stop-notify.ps1",
-            "timeout": 10,
-            "async": true
-          }
-        ]
-      }
     ]
   },
   "statusLine": {

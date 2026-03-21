@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
 import { basename, join } from "path";
-import { readFileSync, mkdirSync, statSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 
 // ── Colors ──────────────────────────────────────────────
 const orange = "\x1b[38;2;255;176;85m";
@@ -40,11 +40,12 @@ function buildBar(pct: number, width: number): string {
 }
 
 function formatResetTime(
-  isoStr: string | undefined | null,
+  value: string | number | undefined | null,
   style: "time" | "datetime" | "date" = "date",
 ): string {
-  if (!isoStr || isoStr === "null") return "";
-  const d = new Date(isoStr);
+  if (value == null || value === "null") return "";
+  // Unix epoch seconds (number) or ISO string
+  const d = typeof value === "number" ? new Date(value * 1000) : new Date(value);
   if (isNaN(d.getTime())) return "";
 
   const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
@@ -129,6 +130,13 @@ line1 += `${cyan}${dirName}${rst}`;
 if (gitBranch) {
   line1 += ` ${green}(${gitBranch}${gitDirty ? `${red}${gitDirty}` : ""}${green})${rst}`;
 }
+if (input.worktree) {
+  line1 += sep;
+  line1 += `${magenta}⌥ ${input.worktree.name}${rst}`;
+  if (input.worktree.original_branch) {
+    line1 += `${dim} ← ${input.worktree.original_branch}${rst}`;
+  }
+}
 line1 += sep;
 switch (effort) {
   case "max":
@@ -151,102 +159,24 @@ switch (effort) {
     break;
 }
 
-// ── OAuth token resolution ──────────────────────────────
-function getOAuthToken(): string {
-  if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
-    return process.env.CLAUDE_CODE_OAUTH_TOKEN;
-  }
-  try {
-    const creds = JSON.parse(
-      readFileSync(join(process.env.HOME!, ".claude", ".credentials.json"), "utf8"),
-    );
-    const token = creds?.claudeAiOauth?.accessToken;
-    if (token && token !== "null") return token;
-  } catch {}
-  return "";
-}
-
-// ── Fetch usage data (cached) ───────────────────────────
-const cacheDir = "/tmp/claude";
-const cacheFile = join(cacheDir, "statusline-usage-cache.json");
-const cacheMaxAge = 60; // seconds
-
-async function fetchUsageData(): Promise<any> {
-  try {
-    mkdirSync(cacheDir, { recursive: true });
-  } catch {}
-
-  // Check cache freshness
-  try {
-    const stat = statSync(cacheFile);
-    const age = (Date.now() - stat.mtimeMs) / 1000;
-    if (age < cacheMaxAge) {
-      return JSON.parse(readFileSync(cacheFile, "utf8"));
-    }
-  } catch {}
-
-  // Fetch fresh data
-  const token = getOAuthToken();
-  if (token) {
-    try {
-      const resp = await fetch("https://api.anthropic.com/api/oauth/usage", {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "anthropic-beta": "oauth-2025-04-20",
-          "User-Agent": "claude-code/2.1.34",
-        },
-        signal: AbortSignal.timeout(5000),
-      });
-      const data: any = await resp.json();
-      if (data?.five_hour) {
-        writeFileSync(cacheFile, JSON.stringify(data));
-        return data;
-      }
-    } catch {}
-  }
-
-  // Fall back to stale cache
-  try {
-    return JSON.parse(readFileSync(cacheFile, "utf8"));
-  } catch {}
-  return null;
-}
-
-const usageData = await fetchUsageData();
-
-// ── Rate limit lines ────────────────────────────────────
+// ── Rate limit lines (from input.rate_limits) ───────────
+const rateLimits = input.rate_limits;
 let rateLines = "";
 const barWidth = 10;
 
-if (usageData?.five_hour) {
-  const fhPct = Math.round(usageData.five_hour.utilization ?? 0);
-  const fhReset = formatResetTime(usageData.five_hour.resets_at, "time");
+if (rateLimits?.five_hour) {
+  const fhPct = Math.round(rateLimits.five_hour.used_percentage ?? 0);
+  const fhReset = formatResetTime(rateLimits.five_hour.resets_at, "time");
   const fhBar = buildBar(fhPct, barWidth);
 
   rateLines += `${white}current${rst} ${fhBar} ${colorForPct(fhPct)}${String(fhPct).padStart(3)}%${rst} ${dim}⟳${rst} ${white}${fhReset}${rst}`;
 
-  if (usageData.seven_day) {
-    const sdPct = Math.round(usageData.seven_day.utilization ?? 0);
-    const sdReset = formatResetTime(usageData.seven_day.resets_at, "datetime");
+  if (rateLimits.seven_day) {
+    const sdPct = Math.round(rateLimits.seven_day.used_percentage ?? 0);
+    const sdReset = formatResetTime(rateLimits.seven_day.resets_at, "datetime");
     const sdBar = buildBar(sdPct, barWidth);
 
     rateLines += `\n${white}weekly${rst}  ${sdBar} ${colorForPct(sdPct)}${String(sdPct).padStart(3)}%${rst} ${dim}⟳${rst} ${white}${sdReset}${rst}`;
-  }
-
-  if (usageData.extra_usage?.is_enabled && fhPct >= 100) {
-    const exPct = Math.round(usageData.extra_usage.utilization ?? 0);
-    const exUsed = ((usageData.extra_usage.used_credits ?? 0) / 100).toFixed(2);
-    const exLimit = ((usageData.extra_usage.monthly_limit ?? 0) / 100).toFixed(2);
-    const exBar = buildBar(exPct, barWidth);
-
-    const now = new Date();
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-    const exReset = `${months[nextMonth.getMonth()]} ${nextMonth.getDate()}`;
-
-    rateLines += `\n${white}extra${rst}   ${exBar} ${colorForPct(exPct)}$${exUsed}${dim}/${rst}${white}$${exLimit}${rst} ${dim}⟳${rst} ${white}${exReset}${rst}`;
   }
 }
 
