@@ -8,8 +8,9 @@ type BashToolInput = { command: string; description: string };
 type ParsedPattern = { prefix: string; glob: string };
 type Decision = "allow" | "deny" | "ask";
 
-// --- Load & merge settings from all layers ---
-function loadSettings(path: string): Record<string, any> {
+// --- Settings ---
+
+function loadJSON(path: string): Record<string, any> {
   try {
     return JSON.parse(readFileSync(path, "utf8"));
   } catch {
@@ -19,19 +20,18 @@ function loadSettings(path: string): Record<string, any> {
 
 function loadMergedSettings(): Record<string, any> {
   const globalPath = process.env.CLAUDE_SETTINGS_PATH ?? join(homedir(), ".claude", "settings.json");
-  const settings = loadSettings(globalPath);
+  const settings = loadJSON(globalPath);
 
   const projectDir = process.env.CLAUDE_PROJECT_DIR;
   if (!projectDir) return settings;
 
-  const projectShared = loadSettings(join(projectDir, ".claude", "settings.json"));
-  const projectLocal = loadSettings(join(projectDir, ".claude", "settings.local.json"));
+  const projectShared = loadJSON(join(projectDir, ".claude", "settings.json"));
+  const projectLocal = loadJSON(join(projectDir, ".claude", "settings.local.json"));
 
   const globalPerms = settings.permissions ?? {};
   const sharedPerms = projectShared.permissions ?? {};
   const localPerms = projectLocal.permissions ?? {};
 
-  // Merge and deduplicate
   const dedup = (arr: string[]) => [...new Set(arr)];
   settings.permissions = {
     ...globalPerms,
@@ -43,7 +43,8 @@ function loadMergedSettings(): Record<string, any> {
   return settings;
 }
 
-// --- Parse Bash(...) permission patterns ---
+// --- Pattern parsing & matching ---
+
 function parseBashPatterns(patterns: string[]): ParsedPattern[] {
   const result: ParsedPattern[] = [];
   for (const pat of patterns) {
@@ -51,7 +52,6 @@ function parseBashPatterns(patterns: string[]): ParsedPattern[] {
     if (!m) continue;
     const inner = m[1];
 
-    // Handle colon syntax: Bash(git push:*) and space/wildcard: Bash(git *)
     const colonIdx = inner.indexOf(":");
     if (colonIdx === -1) {
       result.push({ prefix: inner, glob: inner });
@@ -64,9 +64,7 @@ function parseBashPatterns(patterns: string[]): ParsedPattern[] {
   return result;
 }
 
-// --- fnmatch-style glob matching ---
 function fnmatch(str: string, pattern: string): boolean {
-  // Convert glob to regex: * → .*, ? → ., escape rest
   const regex = pattern
     .replace(/[.+^${}()|[\]\\]/g, "\\$&")
     .replace(/\*/g, ".*")
@@ -78,13 +76,38 @@ function commandMatchesPattern(cmd: string, patterns: ParsedPattern[]): boolean 
   for (const { prefix, glob } of patterns) {
     if (cmd === prefix) return true;
     if (fnmatch(cmd, glob)) return true;
-    // "sort *" should also match bare "sort" (no args)
     if (glob.endsWith(" *") && cmd === glob.slice(0, -2)) return true;
   }
   return false;
 }
 
-// --- Strip redirections, env vars, shell keywords ---
+// --- Shell parsing helpers ---
+
+function skipQuotedValue(cmd: string, start: number): number {
+  const quote = cmd[start];
+  if (quote !== '"' && quote !== "'") {
+    // Unquoted: advance until whitespace, respecting $() subshells
+    let i = start;
+    let depth = 0;
+    while (i < cmd.length) {
+      if (cmd[i] === "$" && cmd[i + 1] === "(") { depth++; i += 2; continue; }
+      if (cmd[i] === "(" && depth > 0) { depth++; i++; continue; }
+      if (cmd[i] === ")" && depth > 0) { depth--; i++; continue; }
+      if (depth > 0) { i++; continue; }
+      if (/\s/.test(cmd[i])) break;
+      i++;
+    }
+    return i;
+  }
+  // Quoted: advance past closing quote
+  let i = start + 1;
+  while (i < cmd.length && cmd[i] !== quote) {
+    if (cmd[i] === "\\" && quote === '"') i++;
+    i++;
+  }
+  return i < cmd.length ? i + 1 : i;
+}
+
 function stripRedirections(cmd: string): string {
   return cmd
     .replace(/\d*>>?\s*&?\d*\S*/g, "")
@@ -94,26 +117,11 @@ function stripRedirections(cmd: string): string {
 }
 
 function stripEnvVars(cmd: string): string {
-  while (/^[A-Za-z_]\w*=/.test(cmd)) {
-    const m = cmd.match(/^[A-Za-z_]\w*=/);
-    if (!m) break;
-    // Skip past the value (quoted or unquoted)
-    let i = m[0].length;
-    if (cmd[i] === '"') {
-      i++;
-      while (i < cmd.length && cmd[i] !== '"') {
-        if (cmd[i] === "\\" && i + 1 < cmd.length) i += 2;
-        else i++;
-      }
-      if (i < cmd.length) i++;
-    } else if (cmd[i] === "'") {
-      i++;
-      while (i < cmd.length && cmd[i] !== "'") i++;
-      if (i < cmd.length) i++;
-    } else {
-      while (i < cmd.length && !/\s/.test(cmd[i])) i++;
-    }
-    const rest = cmd.slice(i).trimStart();
+  const assignRe = /^[A-Za-z_]\w*=/;
+  while (assignRe.test(cmd)) {
+    const eqEnd = cmd.indexOf("=") + 1;
+    const valueEnd = skipQuotedValue(cmd, eqEnd);
+    const rest = cmd.slice(valueEnd).trimStart();
     if (!rest) break; // standalone assignment, keep it
     cmd = rest;
   }
@@ -134,63 +142,51 @@ function normalize(cmd: string): string {
   return cmd;
 }
 
-function isStructural(cmd: string): boolean {
-  return SHELL_KEYWORDS.has(cmd) || COMPOUND_HEADER_RE.test(cmd);
+function isSkippable(cmd: string): boolean {
+  return SHELL_KEYWORDS.has(cmd) || COMPOUND_HEADER_RE.test(cmd) || cmd.startsWith("#");
 }
 
 function isStandaloneAssignment(cmd: string): boolean {
   const m = cmd.match(/^[A-Za-z_]\w*=/);
   if (!m) return false;
-  let i = m[0].length;
-  // skip value
-  if (cmd[i] === '"' || cmd[i] === "'") {
-    const q = cmd[i];
-    i++;
-    while (i < cmd.length && cmd[i] !== q) {
-      if (cmd[i] === "\\" && q === '"') i++;
-      i++;
-    }
-    if (i < cmd.length) i++;
-  } else {
-    let depth = 0;
-    while (i < cmd.length) {
-      if (cmd[i] === "$" && cmd[i + 1] === "(") { depth++; i += 2; continue; }
-      if (cmd[i] === "(" && depth > 0) { depth++; i++; continue; }
-      if (cmd[i] === ")" && depth > 0) { depth--; i++; continue; }
-      if (depth > 0) { i++; continue; }
-      if (/\s/.test(cmd[i])) break;
-      i++;
-    }
-  }
-  return cmd.slice(i).trim() === "";
+  const valueEnd = skipQuotedValue(cmd, m[0].length);
+  return cmd.slice(valueEnd).trim() === "";
 }
 
-// --- Decompose compound commands ---
+// --- Command decomposition ---
+
 function splitOnOperators(command: string): string[] {
-  // Strip heredocs and collapse line continuations
   command = command.replace(/<<-?\s*['"]?(\w+)['"]?\n[\s\S]*?\n\1/g, "");
   command = command.replace(/\\\n/g, " ");
 
   const segments: string[] = [];
   let current: string[] = [];
+  let currentIsEmpty = true;
   let inSingle = false, inDouble = false, parenDepth = 0;
 
   for (let i = 0; i < command.length; i++) {
     const ch = command[i];
 
-    if (ch === "'" && !inDouble && parenDepth === 0) { inSingle = !inSingle; current.push(ch); continue; }
-    if (ch === '"' && !inSingle && parenDepth === 0) { inDouble = !inDouble; current.push(ch); continue; }
+    // Shell comments: # at start of a segment skips to end of line
+    if (ch === "#" && !inSingle && !inDouble && parenDepth === 0 && currentIsEmpty) {
+      while (i + 1 < command.length && command[i + 1] !== "\n") i++;
+      continue;
+    }
+
+    if (ch === "'" && !inDouble && parenDepth === 0) { inSingle = !inSingle; current.push(ch); currentIsEmpty = false; continue; }
+    if (ch === '"' && !inSingle && parenDepth === 0) { inDouble = !inDouble; current.push(ch); currentIsEmpty = false; continue; }
     if (inSingle || inDouble) { current.push(ch); continue; }
 
-    if (ch === "$" && command[i + 1] === "(") { parenDepth++; current.push("$("); i++; continue; }
+    if (ch === "$" && command[i + 1] === "(") { parenDepth++; current.push("$("); currentIsEmpty = false; i++; continue; }
     if (ch === "(" && parenDepth > 0) { parenDepth++; current.push(ch); continue; }
     if (ch === ")" && parenDepth > 0) { parenDepth--; current.push(ch); continue; }
     if (parenDepth > 0) { current.push(ch); continue; }
 
-    if (ch === "&" && command[i + 1] === "&") { segments.push(current.join("")); current = []; i++; continue; }
-    if (ch === "|" && command[i + 1] === "|") { segments.push(current.join("")); current = []; i++; continue; }
-    if (ch === ";" || ch === "|" || ch === "\n") { segments.push(current.join("")); current = []; continue; }
+    if (ch === "&" && command[i + 1] === "&") { segments.push(current.join("")); current = []; currentIsEmpty = true; i++; continue; }
+    if (ch === "|" && command[i + 1] === "|") { segments.push(current.join("")); current = []; currentIsEmpty = true; i++; continue; }
+    if (ch === ";" || ch === "|" || ch === "\n") { segments.push(current.join("")); current = []; currentIsEmpty = true; continue; }
 
+    if (!/\s/.test(ch)) currentIsEmpty = false;
     current.push(ch);
   }
   segments.push(current.join(""));
@@ -211,7 +207,6 @@ function extractSubshells(command: string): string[] {
       i = j + 1;
     } else i++;
   }
-  // Backticks
   const parts = command.split("`");
   for (let idx = 1; idx < parts.length; idx += 2) {
     if (parts[idx].trim()) { subs.push(parts[idx]); subs.push(...extractSubshells(parts[idx])); }
@@ -234,10 +229,11 @@ function decomposeCommand(command: string): string[] {
     if (n) all.push(n);
   }
 
-  return all.filter(cmd => !isStructural(cmd) && !isStandaloneAssignment(cmd));
+  return all.filter(cmd => !isSkippable(cmd) && !isStandaloneAssignment(cmd));
 }
 
-// --- npm/npx/yarn/pnpm → bun rewriting ---
+// --- Package manager rewriting (npm/yarn/pnpm → bun) ---
+
 const pmReplacements: [RegExp, string][] = [
   [/^npm\s+install\b/, "bun install"],
   [/^npm\s+i\b/, "bun i"],
@@ -288,7 +284,8 @@ function rewriteCommand(command: string): { command: string; rewritten: boolean 
   return { command: result.join(""), rewritten };
 }
 
-// --- Main decision logic ---
+// --- Decision logic ---
+
 function decide(command: string, settings: Record<string, any>): { decision: Decision | null; reason?: string } {
   if (!command?.trim()) return { decision: null };
 
@@ -300,49 +297,29 @@ function decide(command: string, settings: Record<string, any>): { decision: Dec
   const subCommands = decomposeCommand(command);
   if (!subCommands.length) return { decision: null };
 
-  // 1. Deny takes priority — any sub-command matching deny → block
   for (const cmd of subCommands) {
     if (commandMatchesPattern(cmd, denyPatterns)) {
       return { decision: "deny", reason: `Blocked sub-command: ${cmd}` };
     }
   }
 
-  // 2. Allow if ALL sub-commands match allow patterns (allow beats ask)
-  const allAllowed = subCommands.every(cmd => commandMatchesPattern(cmd, allowPatterns));
-  if (allAllowed) {
+  if (subCommands.every(cmd => commandMatchesPattern(cmd, allowPatterns))) {
     return { decision: "allow", reason: "All sub-commands match allow patterns" };
   }
 
-  // 3. Ask if any sub-command matches ask patterns
   for (const cmd of subCommands) {
     if (commandMatchesPattern(cmd, askPatterns)) {
       return { decision: "ask", reason: `Confirm sub-command: ${cmd}` };
     }
   }
 
-  // 4. Fallback: no decision — fall through to normal prompting
   return { decision: null };
 }
 
-// --- Entry point ---
-const input = (await Bun.stdin.json()) as PreToolUseHookInput;
+// --- Output ---
 
-if (input.tool_name !== "Bash") process.exit(0);
-
-const toolInput = input.tool_input as BashToolInput;
-const command = toolInput.command?.trim();
-if (!command) process.exit(0);
-
-// Step 1: Rewrite npm/yarn/pnpm → bun
-const { command: rewrittenCmd, rewritten } = rewriteCommand(command);
-const cmd = rewritten ? rewrittenCmd : command;
-
-// Step 2: Decide based on settings patterns
-const settings = loadMergedSettings();
-const { decision, reason } = decide(cmd, settings);
-
-if (decision) {
-  const output: HookJSONOutput = {
+function buildOutput(decision: Decision, reason: string | undefined, rewritten: boolean, rewrittenCmd: string): HookJSONOutput {
+  return {
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
       permissionDecision: decision,
@@ -350,15 +327,26 @@ if (decision) {
       ...(rewritten && { updatedInput: { command: rewrittenCmd } }),
     },
   };
-  console.log(JSON.stringify(output));
-} else if (rewritten) {
-  // No decision but command was rewritten — pass through with updated command
-  const output: HookJSONOutput = {
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      permissionDecision: "ask",
-      ...(rewritten && { updatedInput: { command: rewrittenCmd } }),
-    },
-  };
-  console.log(JSON.stringify(output));
 }
+
+// --- Entry point ---
+
+async function main() {
+  const input = (await Bun.stdin.json()) as PreToolUseHookInput;
+  if (input.tool_name !== "Bash") process.exit(0);
+
+  const command = (input.tool_input as BashToolInput).command?.trim();
+  if (!command) process.exit(0);
+
+  const { command: rewrittenCmd, rewritten } = rewriteCommand(command);
+  const settings = loadMergedSettings();
+  const { decision, reason } = decide(rewritten ? rewrittenCmd : command, settings);
+
+  if (decision) {
+    console.log(JSON.stringify(buildOutput(decision, reason, rewritten, rewrittenCmd)));
+  } else if (rewritten) {
+    console.log(JSON.stringify(buildOutput("ask", undefined, rewritten, rewrittenCmd)));
+  }
+}
+
+await main();
