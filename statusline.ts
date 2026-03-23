@@ -10,6 +10,7 @@ const red = "\x1b[38;2;255;85;85m";
 const yellow = "\x1b[38;2;230;200;0m";
 const white = "\x1b[38;2;220;220;220m";
 const magenta = "\x1b[38;2;180;140;255m";
+const blue = "\x1b[38;2;100;149;237m";
 const dim = "\x1b[2m";
 const rst = "\x1b[0m";
 
@@ -106,6 +107,8 @@ const dirName = basename(cwd);
 
 let gitBranch = "";
 let gitDirty = "";
+let gitAdditions = 0;
+let gitDeletions = 0;
 try {
   execSync(`git -C "${cwd}" rev-parse --is-inside-work-tree`, {
     stdio: ["pipe", "pipe", "ignore"],
@@ -119,24 +122,52 @@ try {
     stdio: ["pipe", "pipe", "ignore"],
   }).trim();
   if (porcelain) gitDirty = "*";
+  // Sum additions/deletions for all changes vs HEAD (staged + unstaged).
+  // Falls back to staged-only diff for repos with no commits yet.
+  let numstatRaw = "";
+  try {
+    numstatRaw = execSync(`git -C "${cwd}" diff HEAD --numstat`, {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "ignore"],
+    }).trim();
+  } catch {}
+  if (!numstatRaw) {
+    try {
+      numstatRaw = execSync(`git -C "${cwd}" diff --cached --numstat`, {
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "ignore"],
+      }).trim();
+    } catch {}
+  }
+  for (const line of numstatRaw.split("\n")) {
+    const parts = line.split("\t");
+    if (parts.length >= 2) {
+      const adds = parseInt(parts[0], 10);
+      const dels = parseInt(parts[1], 10);
+      if (!isNaN(adds)) gitAdditions += adds;
+      if (!isNaN(dels)) gitDeletions += dels;
+    }
+  }
 } catch {}
 
-// ── LINE 1: Model │ Context % │ Dir (branch) │ Effort ──
-let line1 = `${orange}${modelName}${rst}`;
-line1 += sep;
-line1 += `${colorForPct(pctUsed)}${formatTokens(current)}/${formatTokens(size)} ${pctUsed}%${rst}`;
-line1 += sep;
-line1 += `${cyan}${dirName}${rst}`;
-if (gitBranch) {
-  line1 += ` ${green}(${gitBranch}${gitDirty ? `${red}${gitDirty}` : ""}${green})${rst}`;
-}
+// ── LINE 1: Dir (branch) │ Context % │ Model │ Effort ──
+let line1 = `${cyan}${dirName}${rst}`;
 if (input.worktree) {
-  line1 += sep;
-  line1 += `${magenta}⌥ ${input.worktree.name}${rst}`;
+  line1 += ` ${magenta}⧉ ${input.worktree.name}${rst}`;
   if (input.worktree.original_branch) {
     line1 += `${dim} ← ${input.worktree.original_branch}${rst}`;
   }
+} else if (gitBranch) {
+  line1 += ` ${blue}⎇ ${gitBranch}${rst}`;
 }
+if (gitAdditions > 0 || gitDeletions > 0) {
+  if (gitAdditions > 0) line1 += ` ${green}+${gitAdditions}${rst}`;
+  if (gitDeletions > 0) line1 += ` ${red}-${gitDeletions}${rst}`;
+}
+line1 += sep;
+line1 += `${colorForPct(pctUsed)}${formatTokens(current)}/${formatTokens(size)} ${pctUsed}%${rst}`;
+line1 += sep;
+line1 += `${orange}${modelName}${rst}`;
 line1 += sep;
 switch (effort) {
   case "max":
