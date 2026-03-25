@@ -173,6 +173,9 @@ function splitOnOperators(command: string): string[] {
       continue;
     }
 
+    // Backslash escaping: treat next character as literal (outside quotes)
+    if (ch === "\\" && !inSingle && !inDouble && i + 1 < command.length) { current.push(ch, command[i + 1]); currentIsEmpty = false; i++; continue; }
+
     if (ch === "'" && !inDouble && parenDepth === 0) { inSingle = !inSingle; current.push(ch); currentIsEmpty = false; continue; }
     if (ch === '"' && !inSingle && parenDepth === 0) { inDouble = !inDouble; current.push(ch); currentIsEmpty = false; continue; }
     if (inSingle || inDouble) { current.push(ch); continue; }
