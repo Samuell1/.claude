@@ -10,3 +10,4 @@
 
 ## Writing docs / README
 Never use dashes (— or -) as punctuation in documentation or README files. Rephrase sentences using periods, commas, or parentheses instead.
+When creating any documentation or markdown files (other than README.md at the repo root), place them in a `/docs/` folder within the repository you are working in. Create the folder if it doesn't exist.

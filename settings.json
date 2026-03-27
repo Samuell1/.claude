@@ -2,7 +2,8 @@
   "cleanupPeriodDays": 999999,
   "env": {
     "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1",
-    "CLAUDE_CODE_NEW_INIT": "1"
+    "CLAUDE_CODE_NEW_INIT": "1",
+    "CLAUDE_CODE_USE_POWERSHELL_TOOL": "1"
   },
   "attribution": {
     "commit": "",
@@ -21,7 +22,6 @@
       "TaskList",
       "TaskGet",
       "TaskUpdate",
-      "Task",
       "Bash(git *)",
       "Bash(bun install)",
       "Bash(bun install *)",
@@ -146,7 +146,8 @@
     "frontend-design@claude-plugins-official": true,
     "code-review@power-plugins": true,
     "git-workflow@power-plugins": true,
-    "skill-creator@claude-plugins-official": true
+    "skill-creator@claude-plugins-official": true,
+    "docs@power-plugins": true
   },
   "extraKnownMarketplaces": {
     "power-plugins": {
@@ -161,5 +162,6 @@
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
   "autoUpdatesChannel": "latest",
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "autoDreamEnabled": false
 }
