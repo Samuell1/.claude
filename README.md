@@ -68,6 +68,24 @@ my-project ⎇ main +5 -2 ↑1 · 12k/200k 6% · Opus 4.6 (high) · 15m
 - Hidden entirely when both are under 10%
 - Colors shift from muted green → yellow → red at 80%+
 
+## Skills
+
+Custom skills invoked via `/skill-name` in Claude Code.
+
+| Skill | Description |
+|-------|-------------|
+| `rebase` | Non interactive git rebase using a scripted todo plan. Supports pick, drop, fixup, squash, reword, and exec actions. Uses a temp file as `GIT_SEQUENCE_EDITOR` so no interactive editor is needed. |
+
+Usage: `/rebase` then describe what commits to reorder, squash, or drop.
+
+## Agents
+
+Custom agents for specialized tasks, launched via the Agent tool.
+
+| Agent | Model | Description |
+|-------|-------|-------------|
+| `task-planner` | Opus | Breaks down complex tasks into phased implementation plans with dependencies, risk warnings, and verification checklists. |
+
 ## CLAUDE.md
 
 Global instructions organized into sections:
