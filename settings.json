@@ -23,31 +23,20 @@
       "TaskGet",
       "TaskUpdate",
       "Bash(git *)",
-      "Bash(bun install)",
       "Bash(bun install *)",
-      "Bash(bun i)",
+      "Bash(bun i *)",
       "Bash(bun add *)",
       "Bash(bun remove *)",
       "Bash(bun run dev *)",
-      "Bash(bun run dev)",
       "Bash(bun run build *)",
-      "Bash(bun run build)",
       "Bash(bun run start *)",
-      "Bash(bun run start)",
       "Bash(bun run test *)",
-      "Bash(bun run test)",
       "Bash(bun test *)",
-      "Bash(bun test)",
       "Bash(bun run lint *)",
-      "Bash(bun run lint)",
       "Bash(bun run format *)",
-      "Bash(bun run format)",
       "Bash(bun run typecheck *)",
-      "Bash(bun run typecheck)",
       "Bash(bun run check *)",
-      "Bash(bun run check)",
       "Bash(bun run type-check *)",
-      "Bash(bun run type-check)",
       "Bash(bun --version)",
       "Bash(ls *)",
       "Bash(wc *)",
@@ -72,6 +61,9 @@
       "Bash(gh pr status *)",
       "Bash(gh issue view *)",
       "Bash(gh issue list *)",
+      "Bash(gh run view *)",
+      "Bash(gh run list *)",
+      "Bash(gh repo view *)",
       "Bash(gh api *)",
       "Bash(find *)",
       "Bash(grep *)",
@@ -90,11 +82,12 @@
       "Bash(touch *)",
       "Bash(stat *)",
       "Bash(file *)",
-      "Bash(cd *)"
+      "Bash(cd *)",
+      "Bash(chmod *)",
+      "Bash(date *)",
+      "Bash(whoami *)"
     ],
     "deny": [
-      "Bash(rm -rf *)",
-      "Bash(rm -r *)",
       "Bash(sudo *)",
       "Read(.env*)",
       "Write(.env*)",
@@ -119,10 +112,14 @@
       "Bash(bun run migrate*)",
       "Bash(git push:*)",
       "Bash(rm *)",
+      "Bash(rm -r *)",
+      "Bash(rm -rf *)",
       "Bash(*--remote*)",
-      "Bash(*wrangler*delete*)"
+      "Bash(*wrangler*delete*)",
+      "Bash(gh pr create *)",
+      "Bash(gh issue create *)"
     ],
-    "defaultMode": "default"
+    "defaultMode": "acceptEdits"
   },
   "hooks": {
     "PreToolUse": [
@@ -131,7 +128,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run ~/.claude/hooks/PreToolUse.ts",
+            "command": "bun run ~/.claude/hooks/prefer-tools.ts",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bun run ~/.claude/hooks/rewrite-pm.ts",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bun run ~/.claude/hooks/permissions.ts",
             "timeout": 5
           }
         ]
@@ -147,7 +154,9 @@
     "code-review@power-plugins": true,
     "git-workflow@power-plugins": true,
     "skill-creator@claude-plugins-official": true,
-    "docs@power-plugins": true
+    "docs@power-plugins": true,
+    "cloudflare@cloudflare": true,
+    "github@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "power-plugins": {
@@ -156,6 +165,12 @@
         "repo": "dajanarodriguez/claude-plugins"
       },
       "autoUpdate": true
+    },
+    "cloudflare": {
+      "source": {
+        "source": "github",
+        "repo": "cloudflare/skills"
+      }
     }
   },
   "spinnerTipsEnabled": false,

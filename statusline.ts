@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
 import { basename, join } from "path";
-import { readFileSync } from "fs";
+import { readFileSync, statSync } from "fs";
 
 // ── Colors ──────────────────────────────────────────────
 const orange = "\x1b[38;2;255;176;85m";
@@ -11,10 +11,11 @@ const yellow = "\x1b[38;2;230;200;0m";
 const white = "\x1b[38;2;220;220;220m";
 const magenta = "\x1b[38;2;180;140;255m";
 const blue = "\x1b[38;2;100;149;237m";
+const gray = "\x1b[38;2;140;140;140m";
 const dim = "\x1b[2m";
 const rst = "\x1b[0m";
 
-const sep = ` ${dim}│${rst} `;
+const sep = ` ${gray}·${rst} `;
 
 // ── Helpers ─────────────────────────────────────────────
 function formatTokens(num: number): string {
@@ -31,6 +32,13 @@ function colorForPct(pct: number): string {
   if (pct >= 70) return yellow;
   if (pct >= 50) return orange;
   return green;
+}
+
+function mutedColorForPct(pct: number): string {
+  if (pct >= 80) return red;
+  if (pct >= 70) return "\x1b[38;2;170;150;50m";
+  if (pct >= 50) return "\x1b[38;2;180;135;75m";
+  return "\x1b[38;2;60;135;75m";
 }
 
 function buildBar(pct: number, width: number): string {
@@ -80,8 +88,9 @@ if (!input) {
   process.exit(0);
 }
 
+
 // ── Extract JSON data ───────────────────────────────────
-const modelName: string = input.model?.display_name ?? "Claude";
+const modelName: string = (input.model?.display_name ?? "Claude").replace(/\s*\(.*?\)/, "");
 
 const size: number = input.context_window?.context_window_size || 1000000;
 const inputTokens: number = input.context_window?.current_usage?.input_tokens ?? 0;
@@ -89,6 +98,22 @@ const cacheCreate: number = input.context_window?.current_usage?.cache_creation_
 const cacheRead: number = input.context_window?.current_usage?.cache_read_input_tokens ?? 0;
 const current = inputTokens + cacheCreate + cacheRead;
 const pctUsed = size > 0 ? Math.floor((current * 100) / size) : 0;
+
+// ── Session duration (from transcript file birth time) ──
+let sessionDuration = "";
+try {
+  const transcriptPath: string = input.transcript_path ?? "";
+  if (transcriptPath) {
+    const birthMs = statSync(transcriptPath).birthtimeMs;
+    const elapsedMs = Date.now() - birthMs;
+    const totalSec = Math.floor(elapsedMs / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    if (h > 0) sessionDuration = `${h}h${m > 0 ? `${m}m` : ""}`;
+    else if (m > 0) sessionDuration = `${m}m`;
+    else sessionDuration = "<1m";
+  }
+} catch {}
 
 // Read effort from settings
 let effort: string = input.effort_level ?? "default";
@@ -109,6 +134,8 @@ let gitBranch = "";
 let gitDirty = "";
 let gitAdditions = 0;
 let gitDeletions = 0;
+let gitAhead = 0;
+let gitBehind = 0;
 try {
   execSync(`git -C "${cwd}" rev-parse --is-inside-work-tree`, {
     stdio: ["pipe", "pipe", "ignore"],
@@ -122,6 +149,16 @@ try {
     stdio: ["pipe", "pipe", "ignore"],
   }).trim();
   if (porcelain) gitDirty = "*";
+  // Ahead/behind remote
+  try {
+    const abRaw = execSync(`git -C "${cwd}" rev-list --left-right --count @{upstream}...HEAD`, {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "ignore"],
+    }).trim();
+    const [behind, ahead] = abRaw.split(/\s+/).map(Number);
+    if (!isNaN(ahead)) gitAhead = ahead;
+    if (!isNaN(behind)) gitBehind = behind;
+  } catch {}
   // Sum additions/deletions for all changes vs HEAD (staged + unstaged).
   // Falls back to staged-only diff for repos with no commits yet.
   let numstatRaw = "";
@@ -164,55 +201,44 @@ if (gitAdditions > 0 || gitDeletions > 0) {
   if (gitAdditions > 0) line1 += ` ${green}+${gitAdditions}${rst}`;
   if (gitDeletions > 0) line1 += ` ${red}-${gitDeletions}${rst}`;
 }
+if (gitAhead > 0 || gitBehind > 0) {
+  if (gitAhead > 0) line1 += ` ${green}↑${gitAhead}${rst}`;
+  if (gitBehind > 0) line1 += ` ${yellow}↓${gitBehind}${rst}`;
+}
 line1 += sep;
 line1 += `${colorForPct(pctUsed)}${formatTokens(current)}/${formatTokens(size)} ${pctUsed}%${rst}`;
+if (current > 256_000) {
+  line1 += ` ${red}⚠${rst}`;
+}
 line1 += sep;
-line1 += `${orange}${modelName}${rst}`;
-line1 += sep;
-switch (effort) {
-  case "max":
-    line1 += `${red}⬤ ${effort}${rst}`;
-    break;
-  case "high":
-    line1 += `${magenta}● ${effort}${rst}`;
-    break;
-  case "medium":
-    line1 += `${dim}◑ ${effort}${rst}`;
-    break;
-  case "low":
-    line1 += `${dim}◔ ${effort}${rst}`;
-    break;
-  case "auto":
-    line1 += `${cyan}◉ ${effort}${rst}`;
-    break;
-  default:
-    line1 += `${dim}◑ ${effort}${rst}`;
-    break;
+line1 += `${orange}${modelName} ${gray}(${effort})${rst}`;
+if (sessionDuration) {
+  line1 += sep;
+  line1 += `${gray}${sessionDuration}${rst}`;
 }
 
-// ── Rate limit lines (from input.rate_limits) ───────────
+// ── Rate limit line (from input.rate_limits) ────────────
 const rateLimits = input.rate_limits;
-let rateLines = "";
-const barWidth = 10;
+let rateLine = "";
 
 if (rateLimits?.five_hour) {
   const fhPct = Math.round(rateLimits.five_hour.used_percentage ?? 0);
-  const fhReset = formatResetTime(rateLimits.five_hour.resets_at, "time");
-  const fhBar = buildBar(fhPct, barWidth);
+  const sdPct = rateLimits.seven_day ? Math.round(rateLimits.seven_day.used_percentage ?? 0) : 0;
 
-  rateLines += `${white}current${rst} ${fhBar} ${colorForPct(fhPct)}${String(fhPct).padStart(3)}%${rst} ${dim}⟳${rst} ${white}${fhReset}${rst}`;
+  if (fhPct >= 10 || sdPct >= 10) {
+    const fhReset = formatResetTime(rateLimits.five_hour.resets_at, "time");
+    rateLine += `${gray}5h:${rst} ${mutedColorForPct(fhPct)}${fhPct}%${rst} ${gray}⟳ ${fhReset}${rst}`;
 
-  if (rateLimits.seven_day) {
-    const sdPct = Math.round(rateLimits.seven_day.used_percentage ?? 0);
-    const sdReset = formatResetTime(rateLimits.seven_day.resets_at, "datetime");
-    const sdBar = buildBar(sdPct, barWidth);
-
-    rateLines += `\n${white}weekly${rst}  ${sdBar} ${colorForPct(sdPct)}${String(sdPct).padStart(3)}%${rst} ${dim}⟳${rst} ${white}${sdReset}${rst}`;
+    if (rateLimits.seven_day) {
+      const sdReset = formatResetTime(rateLimits.seven_day.resets_at, "datetime");
+      rateLine += `${sep}${gray}7d:${rst} ${mutedColorForPct(sdPct)}${sdPct}%${rst} ${gray}⟳ ${sdReset}${rst}`;
+    }
   }
 }
 
+
 // ── Output ──────────────────────────────────────────────
 process.stdout.write(line1);
-if (rateLines) {
-  process.stdout.write(`\n\n${rateLines}`);
+if (rateLine) {
+  process.stdout.write(`\n${rateLine}`);
 }

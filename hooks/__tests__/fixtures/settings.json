@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(bun install)",
+      "Bash(bun install *)",
+      "Bash(bun i)",
+      "Bash(bun add *)",
+      "Bash(bun remove *)",
+      "Bash(bun run dev)",
+      "Bash(bun run build)",
+      "Bash(bun run test)",
+      "Bash(bun test)",
+      "Bash(ls *)",
+      "Bash(pwd)",
+      "Bash(echo *)",
+      "Bash(mkdir *)"
+    ],
+    "deny": [
+      "Bash(sudo *)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)"
+    ],
+    "ask": [
+      "Bash(rm *)",
+      "Bash(rm -r *)",
+      "Bash(rm -rf *)",
+      "Bash(docker:*)",
+      "Bash(bun run deploy*)"
+    ]
+  }
+}
