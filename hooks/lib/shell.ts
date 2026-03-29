@@ -47,10 +47,33 @@ function stripEnvVars(cmd: string): string {
   return cmd;
 }
 
+function stripGrouping(cmd: string): string {
+  // Strip bare subshell wrapping: (cmd) -> cmd
+  if (cmd.startsWith("(") && cmd.endsWith(")")) {
+    cmd = cmd.slice(1, -1).trim();
+  }
+  // Strip leading ( from split subshell segments: "(cmd" -> "cmd"
+  if (cmd.startsWith("(") && !cmd.startsWith("$(")) {
+    cmd = cmd.slice(1).trim();
+  }
+  // Strip trailing ) not preceded by $( context
+  if (cmd.endsWith(")") && !cmd.includes("$(")) {
+    cmd = cmd.slice(0, -1).trim();
+  }
+  // Strip leading brace group opener: "{ cmd" -> "cmd"
+  if (cmd.startsWith("{") && !cmd.startsWith("${")) {
+    cmd = cmd.slice(1).trim();
+  }
+  // Strip standalone trailing brace
+  if (cmd === "}") return "";
+  return cmd;
+}
+
 function normalize(cmd: string): string {
   cmd = cmd.trim();
   if (!cmd) return cmd;
   cmd = cmd.replace(KEYWORD_PREFIX_RE, "");
+  cmd = stripGrouping(cmd);
   cmd = stripEnvVars(cmd);
   cmd = stripRedirections(cmd);
   cmd = cmd.replace(/\s+/g, " ").trim();
