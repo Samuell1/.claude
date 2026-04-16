@@ -3,7 +3,8 @@
   "env": {
     "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1",
     "CLAUDE_CODE_NEW_INIT": "1",
-    "CLAUDE_CODE_USE_POWERSHELL_TOOL": "1"
+    "CLAUDE_CODE_USE_POWERSHELL_TOOL": "1",
+    "CLAUDE_CODE_NO_FLICKER": "1"
   },
   "attribution": {
     "commit": "",
@@ -85,7 +86,13 @@
       "Bash(cd *)",
       "Bash(chmod *)",
       "Bash(date *)",
-      "Bash(whoami *)"
+      "Bash(whoami *)",
+      "Bash(./vendor/bin/pint *)",
+      "Bash(./vendor/bin/pest *)",
+      "Bash(./vendor/bin/phpunit *)",
+      "Bash(php vendor/bin/pint *)",
+      "Bash(php vendor/bin/pest *)",
+      "Bash(php vendor/bin/phpunit *)"
     ],
     "deny": [
       "Bash(sudo *)",
@@ -110,7 +117,10 @@
       "Bash(bun run publish*)",
       "Bash(bun run release*)",
       "Bash(bun run migrate*)",
-      "Bash(git push:*)",
+      "Bash(git checkout -- *)",
+      "Bash(git push * main*)",
+      "Bash(git push * master*)",
+      "Bash(git push * develop*)",
       "Bash(rm *)",
       "Bash(rm -r *)",
       "Bash(rm -rf *)",
@@ -128,17 +138,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run ~/.claude/hooks/prefer-tools.ts",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "bun run ~/.claude/hooks/rewrite-pm.ts",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "bun run ~/.claude/hooks/permissions.ts",
+            "command": "bun run ~/.claude/hooks/pre-bash.ts",
             "timeout": 5
           }
         ]
@@ -155,8 +155,7 @@
     "git-workflow@power-plugins": true,
     "skill-creator@claude-plugins-official": true,
     "docs@power-plugins": true,
-    "cloudflare@cloudflare": true,
-    "github@claude-plugins-official": true
+    "cloudflare@cloudflare": true
   },
   "extraKnownMarketplaces": {
     "power-plugins": {
@@ -176,7 +175,9 @@
   "spinnerTipsEnabled": false,
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
+  "advisorModel": "opus",
   "autoUpdatesChannel": "latest",
+  "autoDreamEnabled": false,
   "voiceEnabled": true,
-  "autoDreamEnabled": false
+  "tui": "default"
 }
