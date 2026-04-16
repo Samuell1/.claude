@@ -177,7 +177,7 @@
   },
   "spinnerTipsEnabled": false,
   "alwaysThinkingEnabled": true,
-  "effortLevel": "high",
+  "effortLevel": "xhigh",
   "advisorModel": "opus",
   "autoUpdatesChannel": "latest",
   "autoDreamEnabled": false,

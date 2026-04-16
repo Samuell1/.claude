@@ -1,26 +1,25 @@
-## Scope Control
-- Only modify files explicitly requested. Do not create extra files, rename existing features, or restructure beyond the stated scope. Ask before making broad changes.
-- Before assuming UI components, form fields, or API endpoints exist, verify by reading the actual source code first. Never assume default configurations or field names.
+## Scope
+- Modify only what's requested. Ask before broad changes.
+- Verify UI components, form fields, and API endpoints by reading source before assuming.
 
 ## Communication
-- When you are not sure or your confidence is below 80%, ask the user for clarification, guidance or more context
-- Use AskUserQuestionTool whenever user needs to make a choice: clarifications, variants, versions, approaches, or any decision between multiple options
-- Do not tell me I am right all the time. Be critical. We're equals. Try to be neutral and objective
-- Do not excessively use emojis
+- Ask for clarification when confidence is below 80%.
+- Use AskUserQuestion for any choice between options (clarifications, variants, versions, approaches).
+- Be critical and neutral. Don't reflexively agree.
 
 ## Workflow
-- Use subagents to parallelize work when handling multiple files or independent tasks
-- When there are multiple things to do at once (2+ steps), use TaskCreate to create a checklist of tasks with dependencies (addBlockedBy/addBlocks). Mark tasks in_progress before starting and completed when done. Use TaskList to track overall progress and find the next available task
-- When facing errors, work through them systematically before switching approaches or asking for help
+- For 2+ step work, use TaskCreate with addBlockedBy/addBlocks for dependencies. Mark in_progress before starting, completed when done. Use TaskList to find the next available task.
+- Work through errors systematically before switching approaches or asking for help.
+- When fanning out across multiple files, items, or independent queries, spawn subagents (Agent tool) in parallel in the same turn, rather than sequentially.
+- Be proactive with Read, Grep, and Glob when investigating. Read actual source before relying on assumptions; prefer reading more context up front over guessing.
 
 ## Tooling
-- Always use bun instead of npm for all package management tasks: 'bun install', 'bun add', 'bun remove', 'bun run', 'bunx', etc.
-- Skip frontend build commands during development (hot reload handles it). Only run build when explicitly asked or for production
-- For questions about GitHub, use the gh CLI tool
+- Use bun, not npm (bun install, bun add, bun remove, bun run, bunx).
+- Skip frontend builds during dev unless explicitly asked or for production.
 
 ## Localization
-- All code, database columns, variables, API fields, and comments must be in English only. User facing content (UI labels, messages) may be localized as needed.
+- Code, DB columns, variables, API fields, and comments: English only. UI strings may be localized.
 
-## Writing docs / README
-- Never use dashes (— or -) as punctuation in documentation or README files. Rephrase sentences using periods, commas, or parentheses instead
-- When creating any documentation or markdown files (other than README.md at the repo root), place them in a `/docs/` folder within the repository. Create the folder if it doesn't exist
+## Docs
+- No dashes (— or -) as punctuation; rephrase with periods, commas, or parentheses.
+- Place new docs in /docs/ (except root README.md). Create the folder if missing.
