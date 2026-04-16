@@ -4,7 +4,8 @@
     "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1",
     "CLAUDE_CODE_NEW_INIT": "1",
     "CLAUDE_CODE_USE_POWERSHELL_TOOL": "1",
-    "CLAUDE_CODE_NO_FLICKER": "1"
+    "CLAUDE_CODE_NO_FLICKER": "1",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "400000"
   },
   "attribution": {
     "commit": "",
