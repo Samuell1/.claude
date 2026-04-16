@@ -93,7 +93,9 @@
       "Bash(./vendor/bin/phpunit *)",
       "Bash(php vendor/bin/pint *)",
       "Bash(php vendor/bin/pest *)",
-      "Bash(php vendor/bin/phpunit *)"
+      "Bash(php vendor/bin/phpunit *)",
+      "mcp__sentry__get_sentry_resource",
+      "mcp__sentry__search_issues"
     ],
     "deny": [
       "Bash(sudo *)",
