@@ -22,19 +22,19 @@ Clone https://github.com/Samuell1/.claude into ~/.claude/, merging settings.json
 ## What's Inside
 
 - **settings.json** Permissions (allow/deny/ask), plugins, hooks config
-- **hooks/** Modular Bash command validators split into separate concerns (see Hooks section)
+- **hooks/** Single PreToolUse Bash gate with shared libraries (see Hooks section)
 - **statusline.ts** Custom status line with context, git info, model, effort, rate limits, session duration
-- **CLAUDE.md** Global instructions for communication style, workflow, tooling preferences, and documentation rules
+- **CLAUDE.md** Global instructions for scope, communication style, workflow, tooling, localization, and documentation rules
 
 ## Hooks
 
-The hooks system runs before every Bash command. Each hook is a separate module with shared utilities in `hooks/lib/`.
+A single PreToolUse hook (`pre-bash.ts`) runs before every Bash command. It combines three concerns in one pass, short circuiting on the first decision.
 
-| Hook | Purpose |
-|------|---------|
-| `prefer-tools.ts` | Blocks Bash when a dedicated tool exists (e.g. `cat` → Read, `grep` → Grep) |
-| `rewrite-pm.ts` | Rewrites `npm`/`npx`/`yarn`/`pnpm` commands to `bun` automatically |
-| `permissions.ts` | Decomposes compound commands (`&&`, `\|`, `;`, `$()`) and checks each sub command against allow/deny/ask patterns from settings.json |
+| Stage | Purpose |
+|-------|---------|
+| Prefer tools | Blocks Bash when a dedicated tool exists (e.g. `cat` → Read, `grep` → Grep). Skips when the command uses pipes, chains, or redirections. |
+| Rewrite pm | Rewrites `npm`/`npx`/`yarn`/`pnpm` commands to `bun` automatically before the permission check runs. |
+| Permissions | Decomposes compound commands (`&&`, `\|`, `;`, `$()`, brace groups, bare subshells) and matches each sub command against allow/deny/ask patterns from settings.json. |
 
 Shared libraries in `hooks/lib/`:
 
@@ -53,14 +53,14 @@ Tests live in `hooks/__tests__/` and can be run with `bun test`.
 The statusline is minimal and non distracting with muted colors and dot separators.
 
 ```
-my-project ⎇ main +5 -2 ↑1 · 12k/200k 6% · Opus 4.6 (high) · 15m
+my-project ⎇ main +5 -2 ↑1 · 12k/200k 6% · Opus 4.7 (max) · 15m
 5h: 34% ⟳ 2:30pm · 7d: 12% ⟳ apr 5
 ```
 
 **Line 1:**
 - **Project and branch** with dirty indicator, additions/deletions, ahead/behind remote
 - **Context usage** tokens used / max, color coded percentage, red ⚠ warning when over 256k (retrieval quality degrades)
-- **Model and effort** combined in one segment
+- **Model and effort** combined in one segment. Effort label is tinted by tier (gray for default, blue for low, yellow for medium, orange for high, magenta for xhigh, bold red for max)
 - **Session duration** derived from transcript file creation time
 
 **Line 2 (conditional):**
@@ -90,9 +90,11 @@ Custom agents for specialized tasks, launched via the Agent tool.
 
 Global instructions organized into sections:
 
+- **Scope Control** Only modify files explicitly requested, verify assumptions by reading source
 - **Communication** Confidence threshold for asking clarification, critical feedback style, minimal emoji usage
 - **Workflow** Parallel subagents, task tracking with dependencies, systematic error handling
 - **Tooling** Bun over npm, skip frontend builds in dev, gh CLI for GitHub
+- **Localization** Code, DB columns, variables, API fields, and comments in English only. UI text may be localized
 - **Writing docs / README** No dashes as punctuation, docs go in `/docs/` folder
 
 ## MCP Servers
