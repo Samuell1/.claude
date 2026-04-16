@@ -13,6 +13,7 @@ const magenta = "\x1b[38;2;180;140;255m";
 const blue = "\x1b[38;2;100;149;237m";
 const gray = "\x1b[38;2;140;140;140m";
 const dim = "\x1b[2m";
+const bold = "\x1b[1m";
 const rst = "\x1b[0m";
 
 const sep = ` ${gray}·${rst} `;
@@ -39,6 +40,23 @@ function mutedColorForPct(pct: number): string {
   if (pct >= 70) return "\x1b[38;2;170;150;50m";
   if (pct >= 50) return "\x1b[38;2;180;135;75m";
   return "\x1b[38;2;60;135;75m";
+}
+
+function effortStyle(level: string): string {
+  switch (level) {
+    case "low":
+      return blue;
+    case "medium":
+      return yellow;
+    case "high":
+      return orange;
+    case "xhigh":
+      return magenta;
+    case "max":
+      return `${bold}${red}`;
+    default:
+      return gray;
+  }
 }
 
 function buildBar(pct: number, width: number): string {
@@ -211,7 +229,7 @@ if (current > 256_000) {
   line1 += ` ${red}⚠${rst}`;
 }
 line1 += sep;
-line1 += `${orange}${modelName} ${gray}(${effort})${rst}`;
+line1 += `${orange}${modelName} ${effortStyle(effort)}(${effort})${rst}`;
 if (sessionDuration) {
   line1 += sep;
   line1 += `${gray}${sessionDuration}${rst}`;
