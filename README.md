@@ -1,7 +1,7 @@
 
 # Claude Code Setup
 
-Personal Claude Code configuration with settings, statusline, hooks, skills, and plugins.
+Personal Claude Code configuration with settings, statusline, and plugins.
 
 ## Links
 - [Claude Code Documentation](https://docs.claude.com/claude-code)
@@ -9,7 +9,7 @@ Personal Claude Code configuration with settings, statusline, hooks, skills, and
 
 ## Prerequisites
 
-[Bun](https://bun.sh/) is required for the statusline source and hooks.
+[Bun](https://bun.sh/) is required for the statusline source.
 
 ## Setup
 
@@ -23,7 +23,6 @@ Clone https://github.com/Samuell1/.claude into ~/.claude/, merging settings.json
 
 - **settings.json** Permissions (allow/deny/ask), enabled plugins, statusline command
 - **statusline.ts** Custom status line with context, git info, model, effort, rate limits, session duration
-- **hooks/** Optional PreToolUse Bash gate with shared libraries (not wired up in the default settings.json, see Hooks section)
 - **CLAUDE.md** Global instructions for scope, communication, workflow, tooling, localization, testing, and docs
 
 ## Status Line
@@ -64,43 +63,6 @@ Then in `settings.json`:
   "command": "~/.claude/statusline.exe"
 }
 ```
-
-## Hooks (optional)
-
-The `hooks/` folder ships a single PreToolUse hook (`pre-bash.ts`) that runs before every Bash command. It is not enabled by default in `settings.json`. To enable, add the following to your `settings.json`:
-
-```json
-"hooks": {
-  "PreToolUse": [
-    {
-      "matcher": "Bash",
-      "hooks": [
-        { "type": "command", "command": "bun run ~/.claude/hooks/pre-bash.ts", "timeout": 5 }
-      ]
-    }
-  ]
-}
-```
-
-The hook combines three concerns in one pass, short circuiting on the first decision.
-
-| Stage | Purpose |
-|-------|---------|
-| Prefer tools | Blocks Bash when a dedicated tool exists (e.g. `cat` → Read, `grep` → Grep). Skips when the command uses pipes, chains, or redirections. |
-| Rewrite pm | Rewrites `npm`/`npx`/`yarn`/`pnpm` commands to `bun` automatically before the permission check runs. |
-| Permissions | Decomposes compound commands (`&&`, `\|`, `;`, `$()`, brace groups, bare subshells) and matches each sub command against allow/deny/ask patterns from settings.json. |
-
-Shared libraries in `hooks/lib/`:
-
-| Module | Purpose |
-|--------|---------|
-| `shell.ts` | Command splitting, operator parsing, sub command extraction |
-| `patterns.ts` | Glob pattern matching for permission rules |
-| `settings.ts` | Reads and caches settings.json |
-| `rewrite.ts` | Package manager command rewriting logic |
-| `types.ts` | Shared type definitions |
-
-Tests live in `hooks/__tests__/` and can be run with `bun test`.
 
 ## CLAUDE.md
 
