@@ -1,6 +1,8 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { basename, join } from "path";
-import { readFileSync, statSync } from "fs";
+import { mkdirSync, readFileSync, statSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { createHash } from "crypto";
 
 // ── Colors ──────────────────────────────────────────────
 const orange = "\x1b[38;2;255;176;85m";
@@ -8,7 +10,6 @@ const green = "\x1b[38;2;0;175;80m";
 const cyan = "\x1b[38;2;86;182;194m";
 const red = "\x1b[38;2;255;85;85m";
 const yellow = "\x1b[38;2;230;200;0m";
-const white = "\x1b[38;2;220;220;220m";
 const magenta = "\x1b[38;2;180;140;255m";
 const blue = "\x1b[38;2;100;149;237m";
 const gray = "\x1b[38;2;140;140;140m";
@@ -59,43 +60,31 @@ function effortStyle(level: string): string {
   }
 }
 
-function buildBar(pct: number, width: number): string {
-  pct = Math.max(0, Math.min(100, pct));
-  const filled = Math.round((pct * width) / 100);
-  const empty = width - filled;
-  return `${colorForPct(pct)}${"●".repeat(filled)}${dim}${"○".repeat(empty)}${rst}`;
-}
-
 function formatResetTime(
   value: string | number | undefined | null,
-  style: "time" | "datetime" | "date" = "date",
+  style: "time" | "datetime",
 ): string {
   if (value == null || value === "null") return "";
-  // Unix epoch seconds (number) or ISO string
   const d = typeof value === "number" ? new Date(value * 1000) : new Date(value);
   if (isNaN(d.getTime())) return "";
 
-  const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
   const h = d.getHours();
-  const m = d.getMinutes();
   const ampm = h >= 12 ? "pm" : "am";
   const h12 = h % 12 || 12;
-  const timeStr = `${h12}:${m.toString().padStart(2, "0")}${ampm}`;
+  const timeStr = `${h12}:${d.getMinutes().toString().padStart(2, "0")}${ampm}`;
+  if (style === "time") return timeStr;
 
-  switch (style) {
-    case "time":
-      return timeStr;
-    case "datetime":
-      return `${months[d.getMonth()]} ${d.getDate()}, ${timeStr}`;
-    default:
-      return `${months[d.getMonth()]} ${d.getDate()}`;
-  }
+  const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  return `${months[d.getMonth()]} ${d.getDate()}, ${timeStr}`;
 }
 
 // ── Read input ──────────────────────────────────────────
+// readFileSync on fd 0 is the cheapest sync stdin read and avoids top-level
+// await (which blocks --bytecode compilation).
 let input: any;
 try {
-  input = await Bun.stdin.json();
+  const raw = readFileSync(0, "utf8");
+  input = raw ? JSON.parse(raw) : null;
 } catch {
   process.stdout.write("Claude");
   process.exit(0);
@@ -133,14 +122,16 @@ try {
   }
 } catch {}
 
-// Read effort from settings
-let effort: string = input.effort_level ?? "default";
+// Effort level lives at `input.effort.level` in current schema; fall back to
+// legacy `input.effort_level` and finally to settings.json on disk.
+let effort: string = input.effort?.level ?? input.effort_level ?? "default";
 if (effort === "default") {
   try {
-    const settings = JSON.parse(
-      readFileSync(join(process.env.HOME!, ".claude", "settings.json"), "utf8"),
-    );
-    effort = settings.effortLevel ?? "default";
+    const home = process.env.HOME ?? process.env.USERPROFILE;
+    if (home) {
+      const settings = JSON.parse(readFileSync(join(home, ".claude", "settings.json"), "utf8"));
+      effort = settings.effortLevel ?? "default";
+    }
   } catch {}
 }
 
@@ -148,62 +139,96 @@ if (effort === "default") {
 const cwd: string = input.cwd ?? input.workspace?.current_dir ?? process.cwd();
 const dirName = basename(cwd);
 
-let gitBranch = "";
-let gitDirty = "";
-let gitAdditions = 0;
-let gitDeletions = 0;
-let gitAhead = 0;
-let gitBehind = 0;
+type GitInfo = {
+  branch: string;
+  additions: number;
+  deletions: number;
+  ahead: number;
+  behind: number;
+};
+
+const GIT_CACHE_TTL_MS = 5000;
+const sessionId: string = input.session_id ?? "default";
+const cacheDir = join(tmpdir(), "claude-statusline-cache");
+const cacheKey =
+  sessionId + "-" + createHash("sha1").update(cwd).digest("hex").slice(0, 16) + ".json";
+const cachePath = join(cacheDir, cacheKey);
+
+let gitInfo: GitInfo | null = null;
 try {
-  execSync(`git -C "${cwd}" rev-parse --is-inside-work-tree`, {
-    stdio: ["pipe", "pipe", "ignore"],
-  });
-  gitBranch = execSync(`git -C "${cwd}" symbolic-ref --short HEAD`, {
-    encoding: "utf8",
-    stdio: ["pipe", "pipe", "ignore"],
-  }).trim();
-  const porcelain = execSync(`git -C "${cwd}" status --porcelain`, {
-    encoding: "utf8",
-    stdio: ["pipe", "pipe", "ignore"],
-  }).trim();
-  if (porcelain) gitDirty = "*";
-  // Ahead/behind remote
-  try {
-    const abRaw = execSync(`git -C "${cwd}" rev-list --left-right --count @{upstream}...HEAD`, {
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "ignore"],
-    }).trim();
-    const [behind, ahead] = abRaw.split(/\s+/).map(Number);
-    if (!isNaN(ahead)) gitAhead = ahead;
-    if (!isNaN(behind)) gitBehind = behind;
-  } catch {}
-  // Sum additions/deletions for all changes vs HEAD (staged + unstaged).
-  // Falls back to staged-only diff for repos with no commits yet.
-  let numstatRaw = "";
-  try {
-    numstatRaw = execSync(`git -C "${cwd}" diff HEAD --numstat`, {
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "ignore"],
-    }).trim();
-  } catch {}
-  if (!numstatRaw) {
-    try {
-      numstatRaw = execSync(`git -C "${cwd}" diff --cached --numstat`, {
-        encoding: "utf8",
-        stdio: ["pipe", "pipe", "ignore"],
-      }).trim();
-    } catch {}
-  }
-  for (const line of numstatRaw.split("\n")) {
-    const parts = line.split("\t");
-    if (parts.length >= 2) {
-      const adds = parseInt(parts[0], 10);
-      const dels = parseInt(parts[1], 10);
-      if (!isNaN(adds)) gitAdditions += adds;
-      if (!isNaN(dels)) gitDeletions += dels;
-    }
+  if (Date.now() - statSync(cachePath).mtimeMs < GIT_CACHE_TTL_MS) {
+    gitInfo = JSON.parse(readFileSync(cachePath, "utf8"));
   }
 } catch {}
+
+if (!gitInfo) {
+  gitInfo = { branch: "", additions: 0, deletions: 0, ahead: 0, behind: 0 };
+  const gitOpts = { encoding: "utf8" as const, stdio: ["pipe", "pipe", "ignore"] as const };
+  let ranGit = false;
+  try {
+    ranGit = true;
+    // Single combined call: branch + upstream ahead/behind + porcelain changes.
+    // Implicitly errors out when cwd is not a git repo.
+    const statusOut = execFileSync(
+      "git",
+      ["-C", cwd, "status", "--porcelain=v2", "--branch"],
+      gitOpts,
+    );
+    let hasChanges = false;
+    for (const line of statusOut.split("\n")) {
+      if (line.startsWith("# branch.head ")) {
+        const b = line.slice(14);
+        if (b && !b.startsWith("(")) gitInfo.branch = b;
+      } else if (line.startsWith("# branch.ab ")) {
+        const parts = line.slice(12).split(" ");
+        gitInfo.ahead = parseInt(parts[0]?.slice(1) ?? "", 10) || 0;
+        gitInfo.behind = parseInt(parts[1]?.slice(1) ?? "", 10) || 0;
+      } else if (line && !line.startsWith("# ")) {
+        hasChanges = true;
+      }
+    }
+    if (hasChanges) {
+      let numstatRaw = "";
+      try {
+        numstatRaw = execFileSync(
+          "git",
+          ["-C", cwd, "diff", "HEAD", "--numstat"],
+          gitOpts,
+        ).trim();
+      } catch {}
+      if (!numstatRaw) {
+        try {
+          numstatRaw = execFileSync(
+            "git",
+            ["-C", cwd, "diff", "--cached", "--numstat"],
+            gitOpts,
+          ).trim();
+        } catch {}
+      }
+      for (const line of numstatRaw.split("\n")) {
+        const parts = line.split("\t");
+        if (parts.length >= 2) {
+          const adds = parseInt(parts[0], 10);
+          const dels = parseInt(parts[1], 10);
+          if (!isNaN(adds)) gitInfo.additions += adds;
+          if (!isNaN(dels)) gitInfo.deletions += dels;
+        }
+      }
+    }
+  } catch {}
+  if (ranGit) {
+    try {
+      mkdirSync(cacheDir, { recursive: true });
+      writeFileSync(cachePath, JSON.stringify(gitInfo));
+    } catch {}
+  }
+}
+
+const gitBranch = gitInfo.branch;
+const gitAdditions = gitInfo.additions;
+const gitDeletions = gitInfo.deletions;
+const gitAhead = gitInfo.ahead;
+const gitBehind = gitInfo.behind;
 
 // ── LINE 1: Dir (branch) │ Context % │ Model │ Effort ──
 let line1 = `${cyan}${dirName}${rst}`;
@@ -256,7 +281,5 @@ if (rateLimits?.five_hour) {
 
 
 // ── Output ──────────────────────────────────────────────
-process.stdout.write(line1);
-if (rateLine) {
-  process.stdout.write(`\n${rateLine}`);
-}
+// Single write avoids an extra syscall when both lines are present.
+process.stdout.write(rateLine ? line1 + "\n" + rateLine : line1);

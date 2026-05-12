@@ -3,9 +3,10 @@
   "env": {
     "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1",
     "CLAUDE_CODE_NEW_INIT": "1",
-    "CLAUDE_CODE_USE_POWERSHELL_TOOL": "1",
     "CLAUDE_CODE_NO_FLICKER": "1",
-    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "400000"
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "400000",
+    "EDITOR": "zed --wait",
+    "CLAUDE_CODE_FORK_SUBAGENT": "1"
   },
   "attribution": {
     "commit": "",
@@ -40,6 +41,13 @@
       "Bash(bun run check *)",
       "Bash(bun run type-check *)",
       "Bash(bun --version)",
+      "Bash(bunx vitest *)",
+      "Bash(bunx eslint *)",
+      "Bash(bunx biome *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(yarn *)",
+      "Bash(pnpm *)",
       "Bash(ls *)",
       "Bash(wc *)",
       "Bash(sort *)",
@@ -88,6 +96,8 @@
       "Bash(chmod *)",
       "Bash(date *)",
       "Bash(whoami *)",
+      "Bash(composer *)",
+      "Bash(php artisan *)",
       "Bash(./vendor/bin/pint *)",
       "Bash(./vendor/bin/pest *)",
       "Bash(./vendor/bin/phpunit *)",
@@ -103,8 +113,10 @@
       "Write(.env*)",
       "Bash(git push --force *)",
       "Bash(git reset --hard *)",
-      "Bash(git -C:*)",
-      "Bash(git --no-pager:*)"
+      "Bash(git -C *)",
+      "Bash(git --no-pager *)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf .)"
     ],
     "ask": [
       "Bash(python:*)",
@@ -124,63 +136,57 @@
       "Bash(git push * main*)",
       "Bash(git push * master*)",
       "Bash(git push * develop*)",
-      "Bash(rm *)",
-      "Bash(rm -r *)",
-      "Bash(rm -rf *)",
       "Bash(*--remote*)",
-      "Bash(*wrangler*delete*)",
-      "Bash(gh pr create *)",
-      "Bash(gh issue create *)"
+      "Bash(*wrangler*delete*)"
     ],
-    "defaultMode": "acceptEdits"
-  },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun run ~/.claude/hooks/pre-bash.ts",
-            "timeout": 5
-          }
-        ]
-      }
-    ]
+    "defaultMode": "auto"
   },
   "statusLine": {
     "type": "command",
-    "command": "bun run ~/.claude/statusline.ts"
+    "command": "~/.claude/statusline.exe"
   },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
-    "code-review@power-plugins": true,
-    "git-workflow@power-plugins": true,
     "skill-creator@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": false,
+    "cloudflare@cloudflare": true,
+    "guidelines@power-plugins": false,
     "docs@power-plugins": true,
-    "cloudflare@cloudflare": true
+    "code-review@power-plugins": true,
+    "git@power-plugins": true,
+    "engineering@power-plugins": true,
+    "cloudflare@power-plugins": true
   },
   "extraKnownMarketplaces": {
-    "power-plugins": {
-      "source": {
-        "source": "github",
-        "repo": "dajanarodriguez/claude-plugins"
-      },
-      "autoUpdate": true
-    },
     "cloudflare": {
       "source": {
         "source": "github",
         "repo": "cloudflare/skills"
       }
+    },
+    "power-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "dajanarodriguez/claude-plugins"
+      }
     }
   },
   "spinnerTipsEnabled": false,
+  "spinnerVerbs": {
+    "mode": "replace",
+    "verbs": [
+      "Thinking"
+    ]
+  },
   "alwaysThinkingEnabled": true,
-  "effortLevel": "xhigh",
-  "advisorModel": "opus",
+  "effortLevel": "high",
   "autoUpdatesChannel": "latest",
+  "tui": "default",
   "autoDreamEnabled": false,
-  "voiceEnabled": true,
-  "tui": "default"
+  "skipDangerousModePermissionPrompt": true,
+  "remoteControlAtStartup": true,
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true,
+  "voiceEnabled": true
 }
