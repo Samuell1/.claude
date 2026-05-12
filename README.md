@@ -9,14 +9,14 @@ Personal Claude Code configuration with settings, statusline, hooks, skills, and
 
 ## Prerequisites
 
-[Bun](https://bun.sh/) is required for the statusline source, hooks, and the rebase skill.
+[Bun](https://bun.sh/) is required for the statusline source and hooks.
 
 ## Setup
 
 Copy and paste this prompt into Claude Code to install globally (into `~/.claude/`):
 
 ```
-Clone https://github.com/Samuell1/.claude into ~/.claude/, merging settings.json, statusline.ts, CLAUDE.md, skills/, and agents/ into my existing global config. Preserve any existing settings and only update the files from the repo.
+Clone https://github.com/Samuell1/.claude into ~/.claude/, merging settings.json, statusline.ts, and CLAUDE.md into my existing global config. Preserve any existing settings and only update the files from the repo.
 ```
 
 ## What's Inside
@@ -24,8 +24,6 @@ Clone https://github.com/Samuell1/.claude into ~/.claude/, merging settings.json
 - **settings.json** Permissions (allow/deny/ask), enabled plugins, statusline command
 - **statusline.ts** Custom status line with context, git info, model, effort, rate limits, session duration
 - **hooks/** Optional PreToolUse Bash gate with shared libraries (not wired up in the default settings.json, see Hooks section)
-- **skills/** Custom skills invoked via `/skill-name`
-- **agents/** Custom subagents launched via the Agent tool
 - **CLAUDE.md** Global instructions for scope, communication, workflow, tooling, localization, testing, and docs
 
 ## Status Line
@@ -66,24 +64,6 @@ Then in `settings.json`:
   "command": "~/.claude/statusline.exe"
 }
 ```
-
-## Skills
-
-Custom skills invoked via `/skill-name` in Claude Code.
-
-| Skill | Description |
-|-------|-------------|
-| `rebase` | Non interactive git rebase using a scripted todo plan. Supports pick, drop, fixup, squash, reword, and exec actions. Uses a temp file as `GIT_SEQUENCE_EDITOR` so no interactive editor is needed. |
-
-Usage: `/rebase` then describe what commits to reorder, squash, or drop.
-
-## Agents
-
-Custom agents for specialized tasks, launched via the Agent tool.
-
-| Agent | Model | Description |
-|-------|-------|-------------|
-| `task-planner` | Opus | Breaks down complex tasks into phased implementation plans with dependencies, risk warnings, and verification checklists. |
 
 ## Hooks (optional)
 
